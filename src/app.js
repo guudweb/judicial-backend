@@ -25,7 +25,13 @@ app.use(helmet());
 // CORS
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:8080",
+    origin: [
+      process.env.FRONTEND_URL,
+      "https://judicial.gq",
+      "https://www.judicial.gq",
+      "https://poder-judicial-sable.vercel.app",
+      "http://localhost:4000", // Para desarrollo
+    ],
     credentials: true,
   })
 );
