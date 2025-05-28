@@ -1,0 +1,41 @@
+{
+  "name": "judicial-backend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Backend para Sistema Judicial",
+  "dependencies": {
+    "@libsql/client": "^0.15.7",
+    "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.6.1",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "drizzle-orm": "^0.43.1",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.0",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "resend": "^4.5.1",
+    "zod": "^3.25.32"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.23",
+    "drizzle-kit": "^0.31.1",
+    "nodemon": "^3.1.10"
+  }
+}
