@@ -90,7 +90,12 @@ const PERMISSIONS = {
   "audit.view": [ROLES.ADMIN, ROLES.SECRETARIO_GENERAL, ROLES.PRESIDENTE_CSPJ],
 
   // Departamentos
-  "departments.manage": [ROLES.ADMIN],
+  "departments.manage": [ROLES.ADMIN, ROLES.PRESIDENTE_CSPJ],
+  "departments.view_stats": [
+    ROLES.ADMIN,
+    ROLES.PRESIDENTE_CSPJ,
+    ROLES.SECRETARIO_GENERAL,
+  ],
 };
 
 // Middleware para verificar si es el propietario del recurso o tiene rol específico

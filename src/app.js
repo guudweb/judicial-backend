@@ -16,6 +16,7 @@ import newsRoutes from "./routes/news.routes.js";
 import contactRoutes from "./routes/contact.routes.js";
 import userRoutes from "./routes/users.routes.js";
 import booksRoutes from "./routes/books.routes.js";
+import departmentsRoutes from "./routes/departments.routes.js";
 
 const app = express();
 
@@ -75,6 +76,7 @@ app.use("/api/news", newsRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/books", booksRoutes);
+app.use("/api/departments", departmentsRoutes);
 
 // Manejo de errores
 app.use(notFound);

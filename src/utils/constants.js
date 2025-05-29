@@ -58,3 +58,12 @@ export const BOOK_TYPES = {
 };
 
 export const ALLOWED_BOOK_FORMATS = [".pdf", ".epub", ".doc", ".docx"];
+
+export const DEPARTMENT_TYPES = {
+  CSPJ: "cspj",
+  CORTE_SUPREMA: "corte_suprema",
+  AUDIENCIA: "audiencia_provincial",
+  JUZGADO: "juzgado",
+  SECRETARIA: "secretaria",
+  DIRECCION: "direccion",
+};

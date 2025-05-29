@@ -41,6 +41,12 @@ const AUDITABLE_ACTIONS = {
   // Contacto
   "contact.assign": "Asignación de mensaje",
   "contact.resolve": "Resolución de mensaje",
+
+  // Departamentos
+  "department.create": "Creación de departamento",
+  "department.update": "Actualización de departamento",
+  "department.toggle_status": "Cambio de estado de departamento",
+  "department.reorder": "Reordenamiento de departamentos",
 };
 
 // Middleware para auditar acciones
