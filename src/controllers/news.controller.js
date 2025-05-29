@@ -101,3 +101,8 @@ export const submitFromCourt = async (req, res) => {
     .status(201)
     .json(formatResponse(news, "Aviso/Comunicado enviado exitosamente"));
 };
+
+export const getApprovalHistory = async (req, res) => {
+  const history = await newsService.getApprovalHistory(req.params.id);
+  res.json(formatResponse(history, "Historial de aprobación obtenido"));
+};

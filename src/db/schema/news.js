@@ -21,3 +21,20 @@ export const news = sqliteTable("news", {
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
 });
+
+// NUEVA TABLA - Flujo de aprobación de noticias
+export const newsApprovalFlow = sqliteTable("news_approval_flow", {
+  id: text("id").primaryKey(),
+  newsId: text("news_id")
+    .notNull()
+    .references(() => news.id),
+  fromUserId: text("from_user_id")
+    .notNull()
+    .references(() => users.id),
+  toUserId: text("to_user_id").references(() => users.id), // Puede ser null en acciones finales
+  action: text("action").notNull(), // 'submit', 'approve', 'reject', 'publish'
+  comments: text("comments"),
+  fromStatus: text("from_status").notNull(),
+  toStatus: text("to_status").notNull(),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});

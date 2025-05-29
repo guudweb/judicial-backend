@@ -11,6 +11,7 @@ import { AppError } from "../middleware/errorHandler.js";
 import { NEWS_STATUS, NEWS_TYPES, ROLES } from "../utils/constants.js";
 import logger from "../utils/logger.js";
 import notificationService from "./notification.service.js";
+import { newsApprovalFlow } from "../db/index.js";
 
 class NewsService {
   async create(data, userId, imageFile = null) {
@@ -332,6 +333,15 @@ class NewsService {
       })
       .where(eq(news.id, newsId));
 
+    // AGREGAR: Registrar en el flujo de aprobación
+    await this.recordApprovalFlow({
+      newsId,
+      fromUserId: userId,
+      toUserId: notifyUserId,
+      action: "submit",
+      fromStatus: NEWS_STATUS.DRAFT,
+      toStatus: newStatus,
+    });
     // Notificar
     await notificationService.createNotification({
       userId: notifyUserId,
@@ -377,6 +387,16 @@ class NewsService {
       newsItem.type === NEWS_TYPES.AVISO ||
       newsItem.type === NEWS_TYPES.COMUNICADO
     ) {
+      // AGREGAR: Registrar aprobación y publicación
+      await this.recordApprovalFlow({
+        newsId,
+        fromUserId: userId,
+        toUserId: null,
+        action: "approve_and_publish",
+        comments,
+        fromStatus: NEWS_STATUS.PENDING_DIRECTOR,
+        toStatus: NEWS_STATUS.PUBLISHED,
+      });
       await db
         .update(news)
         .set({
@@ -403,6 +423,16 @@ class NewsService {
     }
 
     // Si es noticia, enviar al presidente
+    await this.recordApprovalFlow({
+      newsId,
+      fromUserId: userId,
+      toUserId: presidente[0].id,
+      action: "approve",
+      comments,
+      fromStatus: NEWS_STATUS.PENDING_DIRECTOR,
+      toStatus: NEWS_STATUS.PENDING_PRESIDENT,
+    });
+
     const presidente = await db
       .select()
       .from(users)
@@ -482,6 +512,16 @@ class NewsService {
       })
       .where(eq(news.id, newsId));
 
+    await this.recordApprovalFlow({
+      newsId,
+      fromUserId: userId,
+      toUserId: null,
+      action: "publish",
+      comments,
+      fromStatus: NEWS_STATUS.PENDING_PRESIDENT,
+      toStatus: NEWS_STATUS.PUBLISHED,
+    });
+
     // Notificar al autor y al director
     await notificationService.createNotification({
       userId: newsItem.authorId,
@@ -514,6 +554,7 @@ class NewsService {
     }
 
     const newsItem = await this.getById(newsId);
+    const fromStatus = newsItem.status;
     const user = await db
       .select()
       .from(users)
@@ -547,6 +588,17 @@ class NewsService {
       })
       .where(eq(news.id, newsId));
 
+    // AGREGAR: Registrar el rechazo
+    await this.recordApprovalFlow({
+      newsId,
+      fromUserId: userId,
+      toUserId: newsItem.authorId,
+      action: "reject",
+      comments,
+      fromStatus,
+      toStatus: NEWS_STATUS.DRAFT,
+    });
+
     // Notificar al autor
     await notificationService.createNotification({
       userId: newsItem.authorId,
@@ -560,6 +612,35 @@ class NewsService {
     logger.info("Noticia rechazada", { newsId, userId });
 
     return { success: true, comments };
+  }
+
+  // NUEVO MÉTODO - Obtener historial de aprobación
+  async getApprovalHistory(newsId) {
+    const history = await db
+      .select({
+        flow: newsApprovalFlow,
+        fromUser: {
+          id: users.id,
+          fullName: users.fullName,
+          role: users.role,
+        },
+        toUser: {
+          id: sql`tu.id`,
+          fullName: sql`tu.full_name`,
+          role: sql`tu.role`,
+        },
+      })
+      .from(newsApprovalFlow)
+      .leftJoin(users, eq(newsApprovalFlow.fromUserId, users.id))
+      .leftJoin(sql`users as tu`, eq(newsApprovalFlow.toUserId, sql`tu.id`))
+      .where(eq(newsApprovalFlow.newsId, newsId))
+      .orderBy(desc(newsApprovalFlow.createdAt));
+
+    return history.map((h) => ({
+      ...h.flow,
+      fromUser: h.fromUser,
+      toUser: h.toUser.id ? h.toUser : null,
+    }));
   }
 
   async getById(newsId) {
@@ -821,6 +902,16 @@ class NewsService {
 
     await db.insert(news).values(newNews);
 
+    // AGREGAR: Registrar envío desde juzgado
+    await this.recordApprovalFlow({
+      newsId,
+      fromUserId: userId,
+      toUserId: director[0].id,
+      action: "court_submission",
+      fromStatus: NEWS_STATUS.DRAFT,
+      toStatus: NEWS_STATUS.PENDING_DIRECTOR,
+    });
+
     // Notificar al director
     await notificationService.createNotification({
       userId: director[0].id,
@@ -839,6 +930,24 @@ class NewsService {
     });
 
     return this.getById(newsId);
+  }
+
+  // Método auxiliar para registrar en el flujo de aprobación
+  async recordApprovalFlow(data) {
+    const flowEntry = {
+      id: generateId("naf"),
+      newsId: data.newsId,
+      fromUserId: data.fromUserId,
+      toUserId: data.toUserId || null,
+      action: data.action,
+      comments: data.comments || null,
+      fromStatus: data.fromStatus,
+      toStatus: data.toStatus,
+      createdAt: new Date().toISOString(),
+    };
+
+    await db.insert(newsApprovalFlow).values(flowEntry);
+    return flowEntry;
   }
 }
 export default new NewsService();

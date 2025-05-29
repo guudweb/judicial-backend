@@ -4,6 +4,7 @@ import { authenticate, optionalAuth } from "../middleware/auth.js";
 import { requirePermission, requireAnyRole } from "../middleware/roleCheck.js";
 import { audit, auditHelpers } from "../middleware/audit.js";
 import { uploadImage, handleMulterError } from "../config/multer.js";
+import { getApprovalHistory } from "../controllers/news.controller.js";
 import {
   validate,
   validateQuery,
@@ -58,6 +59,9 @@ router.get("/statistics", asyncHandler(getStatistics));
 
 // Ver detalle de noticia
 router.get("/:id", asyncHandler(getById));
+
+// Ver historial de aprobación de noticia
+router.get("/:id/history", asyncHandler(getApprovalHistory));
 
 // Crear noticia con imagen opcional
 router.post(

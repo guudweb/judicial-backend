@@ -6,3 +6,4 @@ export * from "./contact.js";
 export * from "./audit.js";
 export * from "./sessions.js";
 export * from "./books.js";
+export { newsApprovalFlow } from "./news.js";
