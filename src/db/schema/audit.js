@@ -1,3 +1,4 @@
+// src/db/schema/audit.js (ACTUALIZADO)
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 import { users } from "./users.js";
@@ -22,11 +23,14 @@ export const notifications = sqliteTable("notifications", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id),
-  type: text("type").notNull(), // 'email', 'push'
+  type: text("type").notNull(), // expediente_assigned, news_rejected, etc.
   title: text("title").notNull(),
   message: text("message").notNull(),
-  status: text("status").default("pending"), // 'pending', 'sent', 'failed'
-  metadata: text("metadata"), // JSON
-  sentAt: text("sent_at"),
+  status: text("status").default("unread"), // 'unread', 'read', 'deleted'
+  entityType: text("entity_type"), // expediente, news, contact
+  entityId: text("entity_id"),
+  metadata: text("metadata"), // JSON con datos adicionales
+  readAt: text("read_at"),
+  deletedAt: text("deleted_at"),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });

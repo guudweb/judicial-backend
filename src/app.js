@@ -17,6 +17,7 @@ import contactRoutes from "./routes/contact.routes.js";
 import userRoutes from "./routes/users.routes.js";
 import booksRoutes from "./routes/books.routes.js";
 import departmentsRoutes from "./routes/departments.routes.js";
+import notificationsRoutes from "./routes/notifications.routes.js";
 
 const app = express();
 
@@ -77,6 +78,7 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/books", booksRoutes);
 app.use("/api/departments", departmentsRoutes);
+app.use("/api/notifications", notificationsRoutes);
 
 // Manejo de errores
 app.use(notFound);
