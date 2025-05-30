@@ -4,6 +4,11 @@ import { validate } from "../utils/validators.js";
 import { audit, auditHelpers } from "../middleware/audit.js";
 import { registerSchema, loginSchema } from "../utils/validators.js";
 import { z } from "zod";
+import { strictCSRFProtection } from "../middleware/csrf.js";
+import {
+  authLimiter,
+  sensitiveOperationsLimiter,
+} from "../middleware/rateLimiter.js";
 import {
   register,
   login,
@@ -20,6 +25,7 @@ const router = express.Router();
 // Rutas públicas con auditoría
 router.post(
   "/register",
+  authLimiter,
   validate(registerSchema),
   audit("auth.register", auditHelpers.user),
   asyncHandler(register)
@@ -27,12 +33,13 @@ router.post(
 
 router.post(
   "/login",
+  authLimiter,
   validate(loginSchema),
   audit("auth.login"),
   asyncHandler(login)
 );
 
-router.post("/refresh", asyncHandler(refreshToken));
+router.post("/refresh", authLimiter, asyncHandler(refreshToken));
 
 // Rutas protegidas
 router.use(authenticate);
@@ -54,6 +61,8 @@ router.put(
 
 router.put(
   "/change-password",
+  sensitiveOperationsLimiter,
+  strictCSRFProtection,
   validate(
     z.object({
       oldPassword: z.string().min(1),

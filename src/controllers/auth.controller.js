@@ -48,5 +48,13 @@ export const changePassword = async (req, res) => {
   const { oldPassword, newPassword } = req.body;
   await authService.changePassword(req.user.id, oldPassword, newPassword);
 
-  res.json(formatResponse(null, "Contraseña actualizada exitosamente"));
+  res.json(
+    formatResponse(
+      {
+        message:
+          "Contraseña actualizada exitosamente. Por seguridad, todos los dispositivos han sido desconectados.",
+      },
+      "Contraseña actualizada exitosamente"
+    )
+  );
 };

@@ -1,8 +1,13 @@
 import express from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { authenticate } from "../middleware/auth.js";
-import { upload, handleMulterError } from "../config/multer.js";
+import {
+  upload,
+  handleMulterError,
+  validateFileContentMiddleware,
+} from "../config/multer.js";
 import { audit, auditHelpers } from "../middleware/audit.js";
+import { uploadLimiter } from "../middleware/rateLimiter.js";
 import {
   uploadDocument,
   deleteDocument,
@@ -20,8 +25,10 @@ router.use(authenticate);
 // Subir documento a un expediente
 router.post(
   "/upload/:expedienteId",
+  uploadLimiter,
   upload.single("document"),
   handleMulterError,
+  validateFileContentMiddleware,
   audit("document.upload", auditHelpers.document),
   asyncHandler(uploadDocument)
 );

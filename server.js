@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import app from "./src/app.js";
 import logger from "./src/utils/logger.js";
+import { startCleanupSchedule } from "./src/tasks/cleanup.js";
 
 // Cargar variables de entorno
 dotenv.config();
@@ -13,6 +14,8 @@ const server = app.listen(PORT, () => {
     environment: process.env.NODE_ENV,
     port: PORT,
   });
+  //Iniciar tareas programadas
+  startCleanupSchedule();
 });
 
 // Manejo de errores no capturados

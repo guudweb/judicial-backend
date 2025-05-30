@@ -3,6 +3,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { authenticate } from "../middleware/auth.js";
 import { requirePermission } from "../middleware/roleCheck.js";
 import { upload, handleMulterError } from "../config/multer.js";
+import { publicContactLimiter } from "../middleware/rateLimiter.js";
+import { strictCSRFProtection } from "../middleware/csrf.js";
 import {
   validate,
   validateQuery,
@@ -26,6 +28,8 @@ const router = express.Router();
 // Ruta pública para enviar mensajes
 router.post(
   "/public",
+  publicContactLimiter,
+  strictCSRFProtection,
   upload.single("attachment"),
   handleMulterError,
   validate(createContactSchema),

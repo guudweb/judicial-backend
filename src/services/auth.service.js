@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { db, users, refreshTokens, blacklistedTokens } from "../db/index.js";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, lt } from "drizzle-orm";
 import { generateId } from "../utils/helpers.js";
 import { AppError } from "../middleware/errorHandler.js";
 import logger from "../utils/logger.js";
@@ -52,7 +52,7 @@ class AuthService {
 
     await db.insert(users).values(newUser);
 
-    logger.info("Usuario registrado", { userId, email, role });
+    logger.info("Usuario registrado", { userId, role });
 
     // Retornar usuario sin password
     const { passwordHash: _, ...userWithoutPassword } = newUser;
@@ -87,11 +87,14 @@ class AuthService {
       throw new AppError("Credenciales inválidas", 401);
     }
 
-    // Generar tokens
+    // Invalidar todos los refresh tokens anteriores del usuario (por seguridad)
+    await this.revokeAllUserTokens(foundUser.id);
+
+    // Generar nuevos tokens
     const accessToken = this.generateAccessToken(foundUser);
     const refreshToken = await this.generateRefreshToken(foundUser);
 
-    logger.info("Usuario autenticado", { userId: foundUser.id, email });
+    logger.info("Usuario autenticado", { userId: foundUser.id });
 
     // Retornar usuario sin password
     const { passwordHash, ...userWithoutPassword } = foundUser;
@@ -146,31 +149,38 @@ class AuthService {
         throw new AppError("Usuario no encontrado o inactivo", 401);
       }
 
-      // Generar nuevo access token
-      const accessToken = this.generateAccessToken(user[0]);
+      // ROTACIÓN DE TOKENS - Invalidar el token actual
+      await this.revokeRefreshToken(token, decoded.sub, "Token rotado");
 
-      return { accessToken };
+      // Generar nuevos tokens
+      const newAccessToken = this.generateAccessToken(user[0]);
+      const newRefreshToken = await this.generateRefreshToken(user[0]);
+
+      logger.info("Tokens rotados exitosamente", { userId: decoded.sub });
+
+      return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken, // NUEVO: Retornar también el nuevo refresh token
+      };
     } catch (error) {
+      // Si hay error, invalidar el token por seguridad
+      await this.revokeRefreshToken(token, null, "Token inválido");
       throw new AppError("Token inválido", 401);
     }
   }
 
   async logout(userId, refreshToken) {
     try {
-      // Agregar token a blacklist
+      // Agregar token a blacklist si se proporciona
       if (refreshToken) {
-        const decoded = jwt.decode(refreshToken);
-        await db.insert(blacklistedTokens).values({
-          id: generateId("blk"),
-          token: refreshToken,
+        await this.revokeRefreshToken(
+          refreshToken,
           userId,
-          expiresAt: new Date(decoded.exp * 1000).toISOString(),
-        });
-
-        // Eliminar refresh token
-        await db
-          .delete(refreshTokens)
-          .where(eq(refreshTokens.token, refreshToken));
+          "Logout voluntario"
+        );
+      } else {
+        // Si no se proporciona refresh token, invalidar todos los tokens del usuario
+        await this.revokeAllUserTokens(userId);
       }
 
       logger.info("Usuario desconectado", { userId });
@@ -178,6 +188,94 @@ class AuthService {
     } catch (error) {
       logger.error("Error en logout", error);
       throw new AppError("Error al cerrar sesión", 500);
+    }
+  }
+
+  // NUEVO MÉTODO: Revocar un refresh token específico
+  async revokeRefreshToken(token, userId = null, reason = "Revocado") {
+    try {
+      // Si no tenemos userId, intentar obtenerlo del token
+      if (!userId && token) {
+        try {
+          const decoded = jwt.decode(token);
+          userId = decoded?.sub;
+        } catch (e) {
+          // Ignorar errores de decodificación
+        }
+      }
+
+      // Eliminar de la tabla de refresh tokens
+      await db.delete(refreshTokens).where(eq(refreshTokens.token, token));
+
+      // Agregar a blacklist si es posible
+      if (userId) {
+        const decoded = jwt.decode(token);
+        const expiresAt = decoded?.exp
+          ? new Date(decoded.exp * 1000).toISOString()
+          : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 días por defecto
+
+        await db.insert(blacklistedTokens).values({
+          id: generateId("blk"),
+          token,
+          userId,
+          expiresAt,
+          blacklistedAt: new Date().toISOString(),
+        });
+
+        logger.info("Refresh token revocado", { userId, reason });
+      }
+    } catch (error) {
+      logger.error("Error al revocar refresh token", error);
+      // No lanzar error para no interrumpir el flujo
+    }
+  }
+
+  // NUEVO MÉTODO: Revocar todos los tokens de un usuario
+  async revokeAllUserTokens(userId) {
+    try {
+      // Obtener todos los refresh tokens del usuario
+      const userTokens = await db
+        .select()
+        .from(refreshTokens)
+        .where(eq(refreshTokens.userId, userId));
+
+      // Mover todos a blacklist
+      for (const tokenRecord of userTokens) {
+        await db.insert(blacklistedTokens).values({
+          id: generateId("blk"),
+          token: tokenRecord.token,
+          userId: userId,
+          expiresAt: tokenRecord.expiresAt,
+          blacklistedAt: new Date().toISOString(),
+        });
+      }
+
+      // Eliminar todos los refresh tokens del usuario
+      await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
+
+      logger.info("Todos los tokens del usuario revocados", { userId });
+    } catch (error) {
+      logger.error("Error al revocar tokens del usuario", error);
+      // No lanzar error para no interrumpir el flujo
+    }
+  }
+
+  // NUEVO MÉTODO: Limpiar tokens expirados (para tarea programada)
+  async cleanupExpiredTokens() {
+    try {
+      const now = new Date().toISOString();
+
+      // Limpiar refresh tokens expirados
+      await db.delete(refreshTokens).where(lt(refreshTokens.expiresAt, now));
+
+      // Limpiar blacklisted tokens expirados
+      await db
+        .delete(blacklistedTokens)
+        .where(lt(blacklistedTokens.expiresAt, now));
+
+      logger.info("Tokens expirados limpiados");
+    } catch (error) {
+      logger.error("Error al limpiar tokens expirados", error);
     }
   }
 
@@ -211,6 +309,7 @@ class AuthService {
       token,
       userId: user.id,
       expiresAt: new Date(decoded.exp * 1000).toISOString(),
+      createdAt: new Date().toISOString(),
     });
 
     return token;
@@ -286,6 +385,9 @@ class AuthService {
         updatedAt: new Date().toISOString(),
       })
       .where(eq(users.id, userId));
+
+    // IMPORTANTE: Revocar todos los refresh tokens por seguridad
+    await this.revokeAllUserTokens(userId);
 
     logger.info("Contraseña actualizada", { userId });
     return true;

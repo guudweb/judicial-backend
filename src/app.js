@@ -4,6 +4,15 @@ import helmet from "helmet";
 import morgan from "morgan";
 import compression from "compression";
 import passport from "./config/passport.js";
+import cookieParser from "cookie-parser";
+
+import { generalLimiter } from "./middleware/rateLimiter.js";
+
+import {
+  conditionalCSRFProtection,
+  handleCSRFError,
+  generateCSRFToken,
+} from "./middleware/csrf.js";
 
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
@@ -39,11 +48,17 @@ app.use(
   })
 );
 
+//RATE LIMITING GENERAL AQUÍ:
+app.use(generalLimiter);
+
 // Comprimir respuestas
 app.use(compression());
 
 // Logger HTTP
 app.use(morgan("combined"));
+
+// Parser de cookies (NECESARIO PARA CSRF)
+app.use(cookieParser());
 
 // Parser de JSON
 app.use(express.json({ limit: "10mb" }));
@@ -52,7 +67,11 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // Inicializar Passport
 app.use(passport.initialize());
 
-// Health check
+// CSRF Protection (AGREGAR ESTAS LÍNEAS)
+app.use(conditionalCSRFProtection);
+app.use(generateCSRFToken);
+
+// Health check (sin rate limiting)
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
@@ -61,11 +80,20 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Endpoint para obtener token CSRF (AGREGAR ESTA RUTA)
+app.get("/api/csrf-token", (req, res) => {
+  res.json({
+    success: true,
+    csrfToken: res.locals.csrfToken,
+  });
+});
+
 // Rutas principales
 app.get("/", (req, res) => {
   res.json({
     message: "API del Sistema Judicial",
     version: "1.0.0",
+    csrfToken: res.locals.csrfToken,
   });
 });
 
@@ -82,7 +110,10 @@ app.use("/api/departments", departmentsRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
-// Manejo de errores
+// Manejo de errores CSRF
+app.use(handleCSRFError);
+
+// Manejo de errores generales
 app.use(notFound);
 app.use(errorHandler);
 
