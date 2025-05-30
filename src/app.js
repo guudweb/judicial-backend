@@ -32,18 +32,56 @@ import dashboardRoutes from "./routes/dashboard.routes.js";
 const app = express();
 
 // Middleware de seguridad
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
+        scriptSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Para compatibilidad con Cloudinary
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    noSniff: true,
+    frameguard: { action: "deny" },
+    xssFilter: true,
+  })
+);
 
 // CORS
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "https://judicial.gq",
+  "https://www.judicial.gq",
+  "https://poder-judicial-sable.vercel.app",
+  ...(process.env.NODE_ENV === "development"
+    ? ["http://localhost:4000", "http://localhost:3000"]
+    : []),
+];
+
 app.use(
   cors({
-    origin: [
-      process.env.FRONTEND_URL,
-      "https://judicial.gq",
-      "https://www.judicial.gq",
-      "https://poder-judicial-sable.vercel.app",
-      "http://localhost:4000", // Para desarrollo
-    ],
+    origin: function (origin, callback) {
+      // Permitir requests sin origin (como apps móviles)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("No permitido por CORS"));
+      }
+    },
     credentials: true,
   })
 );

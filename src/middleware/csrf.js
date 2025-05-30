@@ -33,21 +33,25 @@ export const handleCSRFError = (err, req, res, next) => {
 
 // Middleware para generar y enviar token CSRF
 export const generateCSRFToken = (req, res, next) => {
-  try {
-    const token = req.csrfToken();
+  // Solo generar token si el middleware CSRF fue aplicado
+  if (typeof req.csrfToken === "function") {
+    try {
+      const token = req.csrfToken();
 
-    // Agregar el token a la respuesta
-    res.locals.csrfToken = token;
+      // Agregar el token a la respuesta
+      res.locals.csrfToken = token;
 
-    // Si es una petición AJAX, enviar el token en headers
-    if (req.xhr || req.headers.accept?.includes("application/json")) {
-      res.set("X-CSRF-Token", token);
+      // Si es una petición AJAX, enviar el token en headers
+      if (req.xhr || req.headers.accept?.includes("application/json")) {
+        res.set("X-CSRF-Token", token);
+      }
+    } catch (error) {
+      console.error("Error generando token CSRF:", error);
+      // Si hay error, continuar sin token (para rutas que no necesitan CSRF)
     }
-
-    next();
-  } catch (error) {
-    next(error);
   }
+
+  next();
 };
 
 // Rutas que NO necesitan protección CSRF (solo lectura)
@@ -65,10 +69,16 @@ const CSRF_EXEMPT_PATHS = [
   "/api/auth/register",
   "/api/auth/refresh",
 
-  // Endpoints de solo lectura
+  // Endpoints de solo lectura que no modifican estado
   "/api/dashboard",
   "/api/notifications",
   "/api/audit",
+  "/api/expedientes", // GET
+  "/api/documents", // GET
+  "/api/contact", // GET (solo para admins)
+  "/api/users", // GET
+  "/api/books", // GET
+  "/api/departments", // GET
 ];
 
 // Middleware condicional para CSRF
@@ -80,10 +90,20 @@ export const conditionalCSRFProtection = (req, res, next) => {
   const isReadOnly = ["GET", "HEAD", "OPTIONS"].includes(req.method);
 
   if (isExempt || isReadOnly) {
-    return next();
+    // Para rutas exentas, solo aplicar el middleware base para tener req.csrfToken disponible
+    // pero sin validar el token
+    return csrfProtection(req, res, (err) => {
+      if (err && err.code === "EBADCSRFTOKEN") {
+        // Ignorar errores de token para rutas exentas
+        return next();
+      } else if (err) {
+        return next(err);
+      }
+      next();
+    });
   }
 
-  // Aplicar protección CSRF para operaciones de escritura
+  // Aplicar protección CSRF completa para operaciones de escritura
   csrfProtection(req, res, next);
 };
 
