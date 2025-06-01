@@ -79,6 +79,13 @@ const CSRF_EXEMPT_PATHS = [
   "/api/users", // GET
   "/api/books", // GET
   "/api/departments", // GET
+
+  // Rutas de upload de archivos (protegidas por JWT)
+  "/api/documents/upload", // Upload de documentos a expedientes
+  "/api/news/court-submission", // Upload de imágenes en noticias desde juzgados
+  "/api/contact/public", // Ya está en la lista pero maneja archivos
+  "/api/books", // POST para crear libros con archivos
+  "/api/news", // POST para crear noticias con imágenes
 ];
 
 // Middleware condicional para CSRF
