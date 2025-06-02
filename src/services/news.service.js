@@ -168,7 +168,7 @@ class NewsService {
 
   async uploadNewsImage(imageFile, slug) {
     const timestamp = Date.now();
-    const publicId = `judicial/news/${slug}_${timestamp}`;
+    const publicId = `news/${slug}_${timestamp}`;
 
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(

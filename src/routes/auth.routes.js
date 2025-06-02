@@ -4,7 +4,6 @@ import { validate } from "../utils/validators.js";
 import { audit, auditHelpers } from "../middleware/audit.js";
 import { registerSchema, loginSchema } from "../utils/validators.js";
 import { z } from "zod";
-import { strictCSRFProtection } from "../middleware/csrf.js";
 import {
   authLimiter,
   sensitiveOperationsLimiter,
@@ -62,7 +61,6 @@ router.put(
 router.put(
   "/change-password",
   sensitiveOperationsLimiter,
-  strictCSRFProtection,
   validate(
     z.object({
       oldPassword: z.string().min(1),

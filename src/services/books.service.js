@@ -352,16 +352,18 @@ class BooksService {
       })
       .where(eq(books.id, bookId));
 
-    // Generar URL temporal con firma
-    const downloadUrl = cloudinary.utils.private_download_url(
-      book.filePublicId,
-      book.fileType.includes("pdf") ? "pdf" : "raw",
-      {
-        resource_type: "raw",
-        expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hora
-        attachment: true,
-      }
-    );
+    // Generar URL firmada correctamente
+    const timestamp = Math.floor(Date.now() / 1000);
+    const expiresAt = timestamp + 3600; // 1 hora
+    
+    const downloadUrl = cloudinary.url(book.filePublicId, {
+      resource_type: "raw",
+      type: "upload",
+      attachment: true,
+      expires_at: expiresAt,
+      sign_url: true,
+      secure: true
+    });
 
     logger.info("Descarga de libro", { bookId, userId, title: book.title });
 
@@ -433,7 +435,7 @@ class BooksService {
   async uploadCoverImage(file, title) {
     const timestamp = Date.now();
     const safeTitle = title.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 50);
-    const publicId = `judicial/books/covers/${safeTitle}_${timestamp}`;
+    const publicId = `books/covers/${safeTitle}_${timestamp}`;
 
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -464,7 +466,7 @@ class BooksService {
   async uploadBookFile(file, title) {
     const timestamp = Date.now();
     const safeTitle = title.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 50);
-    const publicId = `judicial/books/files/${safeTitle}_${timestamp}`;
+    const publicId = `books/files/${safeTitle}_${timestamp}`;
 
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(

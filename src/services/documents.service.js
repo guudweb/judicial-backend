@@ -40,7 +40,7 @@ class DocumentsService {
       // Preparar el nombre del archivo
       const timestamp = Date.now();
       const safeFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const publicId = `judicial/expedientes/${expedienteId}/${timestamp}_${safeFileName}`;
+      const publicId = `expedientes/${expedienteId}/${timestamp}_${safeFileName}`;
 
       // Subir a Cloudinary
       const result = await new Promise((resolve, reject) => {
@@ -222,16 +222,18 @@ class DocumentsService {
     // Verificar que el usuario tiene acceso al documento
     const doc = await this.getDocumentInfo(documentId);
 
-    // Generar URL temporal con firma (válida por 1 hora)
-    const secureUrl = cloudinary.utils.private_download_url(
-      doc.cloudinaryPublicId,
-      "pdf",
-      {
-        resource_type: "raw",
-        expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hora
-        attachment: true, // Forzar descarga
-      }
-    );
+    // Generar URL firmada correctamente
+    const timestamp = Math.floor(Date.now() / 1000);
+    const expiresAt = timestamp + 3600; // 1 hora
+    
+    const secureUrl = cloudinary.url(doc.cloudinaryPublicId, {
+      resource_type: "raw",
+      type: "upload",
+      attachment: true,
+      expires_at: expiresAt,
+      sign_url: true,
+      secure: true
+    });
 
     logger.info("URL segura generada", { documentId, userId });
 

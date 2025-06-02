@@ -70,7 +70,7 @@ class ContactService {
   async uploadAttachment(file, dni) {
     const timestamp = Date.now();
     const safeFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const publicId = `judicial/citizen_contacts/${dni}_${timestamp}_${safeFileName}`;
+    const publicId = `citizen_contacts/${dni}_${timestamp}_${safeFileName}`;
 
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
