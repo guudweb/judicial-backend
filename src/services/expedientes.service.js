@@ -270,7 +270,7 @@ class ExpedientesService {
       }
 
       newStatus = EXPEDIENTE_STATUS.PENDING_APPROVAL;
-      newLevel = EXPEDIENTE_LEVELS.SECRETARIO_GENERAL;
+      newLevel = EXPEDIENTE_LEVELS.PRESIDENTE_AUDIENCIA;
       nextAssignedTo = secretario[0].id;
       fromLevel = EXPEDIENTE_LEVELS.PRESIDENTE_AUDIENCIA;
       toLevel = EXPEDIENTE_LEVELS.SECRETARIO_GENERAL;
