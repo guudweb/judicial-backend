@@ -684,7 +684,7 @@ class NewsService {
     };
   }
 
-  async getList(filters, pagination, isPublic = false) {
+  async getList(filters, pagination, isPublic = false, userRole = null, userId = null) {
     const { page = 1, limit = 20 } = pagination;
     const offset = (page - 1) * limit;
 
@@ -695,7 +695,41 @@ class NewsService {
       conditions.push(eq(news.status, NEWS_STATUS.PUBLISHED));
     }
 
-    // Filtros
+    // Aplicar filtrado automático según rol (solo para consultas internas)
+    if (!isPublic && userRole && userId) {
+      switch (userRole) {
+        case ROLES.TECNICO_PRENSA:
+          // Solo sus propias noticias
+          conditions.push(eq(news.authorId, userId));
+          break;
+        
+        case ROLES.DIRECTOR_PRENSA:
+          // Sus propias + pendientes de aprobación del director
+          conditions.push(
+            or(
+              eq(news.authorId, userId),
+              eq(news.status, NEWS_STATUS.PENDING_DIRECTOR)
+            )
+          );
+          break;
+        
+        case ROLES.PRESIDENTE_CSPJ:
+          // Sus propias + pendientes de aprobación presidencial
+          conditions.push(
+            or(
+              eq(news.authorId, userId),
+              eq(news.status, NEWS_STATUS.PENDING_PRESIDENT)
+            )
+          );
+          break;
+        
+        case ROLES.ADMIN:
+          // Ve todas las noticias (sin filtro adicional)
+          break;
+      }
+    }
+
+    // Filtros adicionales
     if (filters.search) {
       conditions.push(
         or(
@@ -930,6 +964,135 @@ class NewsService {
     });
 
     return this.getById(newsId);
+  }
+
+  // Método para obtener solo las noticias creadas por el usuario
+  async getMyNews(userId, filters, pagination) {
+    const { page = 1, limit = 20 } = pagination;
+    const offset = (page - 1) * limit;
+
+    const conditions = [eq(news.authorId, userId)];
+
+    // Filtros adicionales
+    if (filters.search) {
+      conditions.push(
+        or(
+          like(news.title, `%${filters.search}%`),
+          like(news.content, `%${filters.search}%`)
+        )
+      );
+    }
+
+    if (filters.type) {
+      conditions.push(eq(news.type, filters.type));
+    }
+
+    if (filters.status) {
+      conditions.push(eq(news.status, filters.status));
+    }
+
+    const query = db
+      .select({
+        news: news,
+        author: {
+          id: users.id,
+          fullName: users.fullName,
+        },
+      })
+      .from(news)
+      .leftJoin(users, eq(news.authorId, users.id))
+      .where(and(...conditions))
+      .orderBy(desc(news.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const result = await query;
+
+    // Contar total
+    const [{ count }] = await db
+      .select({ count: sql`count(*)` })
+      .from(news)
+      .where(and(...conditions));
+
+    return formatPaginatedResponse(
+      result.map((r) => ({
+        ...r.news,
+        author: r.author,
+      })),
+      page,
+      limit,
+      Number(count)
+    );
+  }
+
+  // Método para obtener noticias pendientes de aprobación según el rol del usuario
+  async getPendingApproval(userRole, userId, filters, pagination) {
+    const { page = 1, limit = 20 } = pagination;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+
+    // Filtrar según rol
+    switch (userRole) {
+      case ROLES.DIRECTOR_PRENSA:
+        conditions.push(eq(news.status, NEWS_STATUS.PENDING_DIRECTOR));
+        break;
+      
+      case ROLES.PRESIDENTE_CSPJ:
+        conditions.push(eq(news.status, NEWS_STATUS.PENDING_PRESIDENT));
+        break;
+      
+      default:
+        // Si el rol no puede aprobar noticias, retornar vacío
+        return formatPaginatedResponse([], page, limit, 0);
+    }
+
+    // Filtros adicionales
+    if (filters.search) {
+      conditions.push(
+        or(
+          like(news.title, `%${filters.search}%`),
+          like(news.content, `%${filters.search}%`)
+        )
+      );
+    }
+
+    if (filters.type) {
+      conditions.push(eq(news.type, filters.type));
+    }
+
+    const query = db
+      .select({
+        news: news,
+        author: {
+          id: users.id,
+          fullName: users.fullName,
+        },
+      })
+      .from(news)
+      .leftJoin(users, eq(news.authorId, users.id))
+      .where(and(...conditions))
+      .orderBy(desc(news.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const result = await query;
+
+    // Contar total
+    const [{ count }] = await db
+      .select({ count: sql`count(*)` })
+      .from(news)
+      .where(and(...conditions));
+
+    return formatPaginatedResponse(
+      result.map((r) => ({
+        ...r.news,
+        author: r.author,
+      })),
+      page,
+      limit,
+      Number(count)
+    );
   }
 
   // Método auxiliar para registrar en el flujo de aprobación

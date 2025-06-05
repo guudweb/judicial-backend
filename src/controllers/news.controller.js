@@ -40,7 +40,13 @@ export const getList = async (req, res) => {
   const { page, limit } = req.validatedQuery || req.query;
 
   const filters = { search, type, status, authorId };
-  const result = await newsService.getList(filters, { page, limit }, false);
+  const result = await newsService.getList(
+    filters, 
+    { page, limit }, 
+    false, 
+    req.user.role, 
+    req.user.id
+  );
 
   res.json(result);
 };
@@ -105,4 +111,29 @@ export const submitFromCourt = async (req, res) => {
 export const getApprovalHistory = async (req, res) => {
   const history = await newsService.getApprovalHistory(req.params.id);
   res.json(formatResponse(history, "Historial de aprobación obtenido"));
+};
+
+export const getMyNews = async (req, res) => {
+  const { search, type, status } = req.query;
+  const { page, limit } = req.validatedQuery || req.query;
+
+  const filters = { search, type, status };
+  const result = await newsService.getMyNews(req.user.id, filters, { page, limit });
+
+  res.json(result);
+};
+
+export const getPendingApproval = async (req, res) => {
+  const { search, type } = req.query;
+  const { page, limit } = req.validatedQuery || req.query;
+
+  const filters = { search, type };
+  const result = await newsService.getPendingApproval(
+    req.user.role, 
+    req.user.id, 
+    filters, 
+    { page, limit }
+  );
+
+  res.json(result);
 };

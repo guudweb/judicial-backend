@@ -25,6 +25,8 @@ import {
   reject,
   getStatistics,
   submitFromCourt,
+  getMyNews,
+  getPendingApproval,
 } from "../controllers/news.controller.js";
 import { ROLES, NEWS_TYPES } from "../utils/constants.js";
 
@@ -56,6 +58,12 @@ router.get("/", validateQuery(paginationSchema), asyncHandler(getList));
 
 // Estadísticas
 router.get("/statistics", asyncHandler(getStatistics));
+
+// Mis noticias (solo las creadas por el usuario actual)
+router.get("/my-news", validateQuery(paginationSchema), asyncHandler(getMyNews));
+
+// Noticias pendientes de aprobación (según rol del usuario)
+router.get("/pending-approval", validateQuery(paginationSchema), asyncHandler(getPendingApproval));
 
 // Ver detalle de noticia
 router.get("/:id", asyncHandler(getById));
