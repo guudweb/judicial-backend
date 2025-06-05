@@ -423,16 +423,6 @@ class NewsService {
     }
 
     // Si es noticia, enviar al presidente
-    await this.recordApprovalFlow({
-      newsId,
-      fromUserId: userId,
-      toUserId: presidente[0].id,
-      action: "approve",
-      comments,
-      fromStatus: NEWS_STATUS.PENDING_DIRECTOR,
-      toStatus: NEWS_STATUS.PENDING_PRESIDENT,
-    });
-
     const presidente = await db
       .select()
       .from(users)
@@ -442,6 +432,16 @@ class NewsService {
     if (presidente.length === 0) {
       throw new AppError("No se encontró el presidente del CSPJ", 404);
     }
+
+    await this.recordApprovalFlow({
+      newsId,
+      fromUserId: userId,
+      toUserId: presidente[0].id,
+      action: "approve",
+      comments,
+      fromStatus: NEWS_STATUS.PENDING_DIRECTOR,
+      toStatus: NEWS_STATUS.PENDING_PRESIDENT,
+    });
 
     await db
       .update(news)
