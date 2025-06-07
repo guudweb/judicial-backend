@@ -57,6 +57,7 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   "https://judicial.gq",
   "https://www.judicial.gq",
+  "https://justicia-dashboard.vercel.app",
   "https://poder-judicial-sable.vercel.app",
   ...(process.env.NODE_ENV === "development"
     ? ["http://localhost:4000", "http://localhost:3000"]
