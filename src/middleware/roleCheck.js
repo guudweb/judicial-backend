@@ -83,8 +83,10 @@ const PERMISSIONS = {
   "contact.assign": [ROLES.SECRETARIO_ADJUNTO],
 
   // Usuarios
-  "users.manage": [ROLES.ADMIN],
-  "users.view": [ROLES.ADMIN, ROLES.SECRETARIO_GENERAL],
+  "user.create": [ROLES.ADMIN],
+  "user.view": [ROLES.ADMIN, ROLES.SECRETARIO_GENERAL],
+  "user.update": [ROLES.ADMIN],
+  "user.delete": [ROLES.ADMIN],
 
   // Auditoría
   "audit.view": [ROLES.ADMIN, ROLES.SECRETARIO_GENERAL, ROLES.PRESIDENTE_CSPJ],
