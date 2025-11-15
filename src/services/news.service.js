@@ -28,7 +28,7 @@ class NewsService {
     }
 
     // Validar permisos según rol
-    const allowedRoles = [ROLES.TECNICO_PRENSA, ROLES.DIRECTOR_PRENSA];
+    const allowedRoles = [ROLES.TECNICO_PRENSA, ROLES.DIRECTOR_PRENSA, ROLES.ADMIN];
     if (!allowedRoles.includes(user[0].role)) {
       throw new AppError("No tienes permisos para crear noticias", 403);
     }
@@ -291,8 +291,8 @@ class NewsService {
     let notifyUserId;
     let notifyMessage;
 
-    if (author[0].role === ROLES.DIRECTOR_PRENSA) {
-      // Enviar al presidente
+    if (author[0].role === ROLES.DIRECTOR_PRENSA || author[0].role === ROLES.ADMIN) {
+      // Enviar al presidente (Director y Admin pueden hacerlo)
       newStatus = NEWS_STATUS.PENDING_PRESIDENT;
 
       const presidente = await db
@@ -360,16 +360,16 @@ class NewsService {
   async approveByDirector(newsId, userId, comments) {
     const newsItem = await this.getById(newsId);
 
-    // Verificar que es el director
+    // Verificar que es el director o admin
     const user = await db
       .select()
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
 
-    if (user[0].role !== ROLES.DIRECTOR_PRENSA) {
+    if (user[0].role !== ROLES.DIRECTOR_PRENSA && user[0].role !== ROLES.ADMIN) {
       throw new AppError(
-        "Solo el director de prensa puede aprobar en este nivel",
+        "Solo el director de prensa o admin puede aprobar en este nivel",
         403
       );
     }
@@ -472,16 +472,16 @@ class NewsService {
   async approveByPresident(newsId, userId, comments) {
     const newsItem = await this.getById(newsId);
 
-    // Verificar que es el presidente
+    // Verificar que es el presidente o admin
     const user = await db
       .select()
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
 
-    if (user[0].role !== ROLES.PRESIDENTE_CSPJ) {
+    if (user[0].role !== ROLES.PRESIDENTE_CSPJ && user[0].role !== ROLES.ADMIN) {
       throw new AppError(
-        "Solo el presidente del CSPJ puede aprobar en este nivel",
+        "Solo el presidente del CSPJ o admin puede aprobar en este nivel",
         403
       );
     }
@@ -565,12 +565,12 @@ class NewsService {
     let canReject = false;
     if (
       newsItem.status === NEWS_STATUS.PENDING_DIRECTOR &&
-      user[0].role === ROLES.DIRECTOR_PRENSA
+      (user[0].role === ROLES.DIRECTOR_PRENSA || user[0].role === ROLES.ADMIN)
     ) {
       canReject = true;
     } else if (
       newsItem.status === NEWS_STATUS.PENDING_PRESIDENT &&
-      user[0].role === ROLES.PRESIDENTE_CSPJ
+      (user[0].role === ROLES.PRESIDENTE_CSPJ || user[0].role === ROLES.ADMIN)
     ) {
       canReject = true;
     }
