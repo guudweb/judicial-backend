@@ -68,10 +68,10 @@ const PERMISSIONS = {
   ],
 
   // Noticias
-  "news.create": [ROLES.TECNICO_PRENSA, ROLES.DIRECTOR_PRENSA],
-  "news.approve_director": [ROLES.DIRECTOR_PRENSA],
-  "news.approve_president": [ROLES.PRESIDENTE_CSPJ],
-  "news.publish_direct": [ROLES.DIRECTOR_PRENSA], // Solo para avisos/comunicados
+  "news.create": [ROLES.ADMIN, ROLES.TECNICO_PRENSA, ROLES.DIRECTOR_PRENSA],
+  "news.approve_director": [ROLES.ADMIN, ROLES.DIRECTOR_PRENSA],
+  "news.approve_president": [ROLES.ADMIN, ROLES.PRESIDENTE_CSPJ],
+  "news.publish_direct": [ROLES.ADMIN, ROLES.DIRECTOR_PRENSA], // Solo para avisos/comunicados
 
   // Contacto
   "contact.view": [
