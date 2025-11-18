@@ -206,17 +206,18 @@ class NewsService {
       .where(eq(users.id, userId))
       .limit(1);
 
+    const isAdmin = user[0].role === ROLES.ADMIN;
     const canDelete =
       newsItem.authorId === userId ||
       user[0].role === ROLES.DIRECTOR_PRENSA ||
-      user[0].role === ROLES.ADMIN;
+      isAdmin;
 
     if (!canDelete) {
       throw new AppError("No tienes permisos para eliminar esta noticia", 403);
     }
 
-    // Solo se puede eliminar si está en borrador
-    if (newsItem.status !== NEWS_STATUS.DRAFT) {
+    // Solo se puede eliminar si está en borrador, excepto para admin
+    if (!isAdmin && newsItem.status !== NEWS_STATUS.DRAFT) {
       throw new AppError("Solo se pueden eliminar noticias en borrador", 400);
     }
 
@@ -231,7 +232,7 @@ class NewsService {
 
     await db.delete(news).where(eq(news.id, newsId));
 
-    logger.info("Noticia eliminada", { newsId, userId });
+    logger.info("Noticia eliminada", { newsId, userId, status: newsItem.status });
 
     return { success: true };
   }
