@@ -221,6 +221,9 @@ class NewsService {
       throw new AppError("Solo se pueden eliminar noticias en borrador", 400);
     }
 
+    // Eliminar registros del flujo de aprobación primero (para evitar FK constraint)
+    await db.delete(newsApprovalFlow).where(eq(newsApprovalFlow.newsId, newsId));
+
     // Eliminar imagen si existe
     if (newsItem.imagePublicId) {
       try {
